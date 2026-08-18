@@ -1069,8 +1069,10 @@ export default function App() {
     setDossiers(prev => prev.map(d => d.id === updated.id ? updated : d)), []);
 
   const handleNew = useCallback(() => {
-    const d = newDossierTemplate();
-    setDossiers(prev => [d, ...prev]);
+    const actuels = dossiersRef.current || [];
+    const d = newDossierTemplate(actuels);
+    dossiersRef.current = [d, ...actuels];
+    setDossiers(dossiersRef.current);
     setActiveDossierId(d.id);
   }, []);
 

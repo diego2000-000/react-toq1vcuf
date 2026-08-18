@@ -49,11 +49,13 @@ export function mergeClaims(dossiers, claims) {
     }
 
     if (!target) {
-      const fresh = newDossierTemplate();
-      if (claim.id) fresh.id = String(claim.id);
+      // Le numéro reste le nôtre : l'identifiant d'Encircle vit dans externalId.
+      // On passe `out` pour que deux réclamations importées d'un coup ne
+      // reçoivent pas le même rang.
+      const ouverture = isBlank(claim.createdAt) ? new Date() : new Date(claim.createdAt);
+      const fresh = newDossierTemplate(out, ouverture);
       fresh.externalId = externalId;
       if (!isBlank(claim.client)) fresh.client = String(claim.client).trim();
-      if (!isBlank(claim.createdAt)) fresh.createdAt = new Date(claim.createdAt).toISOString();
       out.push(fresh);
       byExternal.set(externalId, fresh);
       byId.set(fresh.id, fresh);

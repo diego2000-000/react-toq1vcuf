@@ -52,10 +52,30 @@ export const PHASES = [
 export const ALL_TASKS = PHASES.flatMap(p => p.tasks.map(t => t.id));
 
 // ─── TEMPLATE & HELPERS ───────────────────────────────────────────────────────
-export const newDossierTemplate = () => ({
-  id: `${new Date().getFullYear().toString().slice(2)}${(new Date().getMonth()+1).toString().padStart(2,"0")}MO${Math.floor(Math.random()*900+100)}`,
+// Le numéro de dossier est le nôtre, pas celui d'une source externe :
+// AAMM + "MO" + un rang qui court sur l'année (2602MO014, 2603MO027, 2603MO031).
+// Le mois vient de l'ouverture du dossier, le rang suit le plus haut déjà pris
+// dans la même année — jamais un tirage au sort, qui finirait par doubler un
+// numéro existant.
+const ID_FORMAT = /^(\d{2})(\d{2})MO(\d+)$/;
+
+export function nextDossierId(existants = [], when = new Date()) {
+  const d = when instanceof Date ? when : new Date(when);
+  const aa = d.getFullYear().toString().slice(2);
+  const mm = (d.getMonth() + 1).toString().padStart(2, "0");
+
+  let rang = 0;
+  for (const dossier of existants) {
+    const m = ID_FORMAT.exec(String((dossier && dossier.id) || ""));
+    if (m && m[1] === aa) rang = Math.max(rang, parseInt(m[3], 10));
+  }
+  return `${aa}${mm}MO${String(rang + 1).padStart(3, "0")}`;
+}
+
+export const newDossierTemplate = (existants = [], when = new Date()) => ({
+  id: nextDossierId(existants, when),
   client: "Nouveau client",
-  createdAt: new Date().toISOString(),
+  createdAt: (when instanceof Date ? when : new Date(when)).toISOString(),
   finUrgence: "",
   tasks: Object.fromEntries(ALL_TASKS.map(id => [id, "pending"])),
   notes: Object.fromEntries(ALL_TASKS.map(id => [id, ""])),
