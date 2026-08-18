@@ -11,7 +11,9 @@
     "build": "react-scripts build",
     "test": "react-scripts test --env=jsdom",
     "eject": "react-scripts eject",
-    "build:artifact": "node build-artifact.mjs"
+    "build:artifact": "node build-artifact.mjs",
+    "test:domaine": "node --test \"test/*.test.mjs\"",
+    "sync:encircle": "node scripts/sync-encircle.mjs"
   },
   "devDependencies": {
     "react-scripts": "latest",

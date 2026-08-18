@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { PHASES, ALL_TASKS, newDossierTemplate, getProgress, getOverallStatus } from "./dossier";
 import { loadDossiers, saveLocal, makePayload, publishSnapshot, stashView, popView } from "./storage";
 
 const FontImport = () => (
@@ -19,51 +20,6 @@ const FontImport = () => (
   `}</style>
 );
 
-// ─── PHASES ───────────────────────────────────────────────────────────────────
-const PHASES = [
-  {
-    id: "urgence", label: "INTERVENTION D'URGENCE", color: "#E8431A", accent: "#FF6B3D", icon: "🚨",
-    duration: "Indéterminée (séchage en cours)",
-    tasks: [
-      { id: "intervention_urgence", label: "Intervention d'urgence", deadline: "En cours ou complétée" },
-      { id: "rapport_intervention", label: "Rapport d'intervention", deadline: "Dans les 24h suivant la fin de l'intervention" },
-    ],
-  },
-  {
-    id: "sechage", label: "SÉCHAGE RESTAURATIF", color: "#1A7A5E", accent: "#2EC99A", icon: "💨",
-    duration: "Variable selon conditions",
-    tasks: [
-      { id: "suivi_equipement", label: "Suivi / Pick-up d'équipement", deadline: "Jusqu'à récupération complète", type: "equipment" },
-    ],
-  },
-  {
-    id: "fin_urgence", label: "FIN DE L'URGENCE", color: "#C0871A", accent: "#F5AE3A", icon: "📋",
-    duration: "Clôture administrative",
-    tasks: [
-      { id: "estimation_urgence", label: "Estimation d'urgence", deadline: "Dans les 3 jours suivant la fin de l'urgence" },
-      { id: "facture_urgence", label: "Facture d'urgence", deadline: "Dans les 3 jours suivant la fin de l'urgence" },
-    ],
-  },
-  {
-    id: "reconstruction", label: "PHASE DE RECONSTRUCTION", color: "#1A6E8E", accent: "#3AB8E0", icon: "🏗️",
-    duration: "Estimation et mise en chantier",
-    tasks: [
-      { id: "estimation_reconstruction", label: "Estimé de reconstruction", deadline: "Dans les 7 jours suivant la fin du séchage" },
-      { id: "approbation_estime", label: "Approbation de l'estimé", deadline: "Selon assureur / client" },
-      { id: "mise_en_chantier", label: "Mise en chantier", deadline: "Délai calculé selon montant et occupation", type: "chantier" },
-    ],
-  },
-  {
-    id: "fin_travaux", label: "FIN DE TRAVAUX", color: "#6B3FA0", accent: "#A97FD4", icon: "✅",
-    duration: "Clôture du chantier",
-    tasks: [
-      { id: "travaux_completes", label: "Travaux complétés", deadline: "À la fin du chantier" },
-      { id: "facture_finale", label: "Facture finale envoyée", deadline: "Dans les 3 jours suivant la fin des travaux" },
-    ],
-  },
-];
-
-const ALL_TASKS = PHASES.flatMap(p => p.tasks.map(t => t.id));
 
 const STATUS = {
   pending:    { bg: "#151515", border: "#2a2a2a", text: "#666",    label: "En attente",  dot: "#555"    },
@@ -103,31 +59,6 @@ function formatDateShort(iso) {
     " " + d.toLocaleTimeString("fr-CA", { hour: "2-digit", minute: "2-digit" });
 }
 
-// ─── TEMPLATE & HELPERS ───────────────────────────────────────────────────────
-const newDossierTemplate = () => ({
-  id: `${new Date().getFullYear().toString().slice(2)}${(new Date().getMonth()+1).toString().padStart(2,"0")}MO${Math.floor(Math.random()*900+100)}`,
-  client: "Nouveau client",
-  createdAt: new Date().toISOString(),
-  finUrgence: "",
-  tasks: Object.fromEntries(ALL_TASKS.map(id => [id, "pending"])),
-  notes: Object.fromEntries(ALL_TASKS.map(id => [id, ""])),
-  visites: [],
-  chantier: { dateApprobation: "", tauxOccupation: "", montantEstime: "", dateDebutReelle: "" },
-});
-
-const getProgress = (tasks) => {
-  const vals = Object.values(tasks);
-  const done = vals.filter(v => v === "done").length;
-  return { done, total: vals.length, pct: Math.round((done / vals.length) * 100) };
-};
-
-const getOverallStatus = (tasks) => {
-  const vals = Object.values(tasks);
-  if (vals.some(v => v === "overdue")) return "overdue";
-  if (vals.every(v => v === "done")) return "done";
-  if (vals.some(v => v === "inprogress" || v === "done")) return "inprogress";
-  return "pending";
-};
 
 // ─── STORAGE ──────────────────────────────────────────────────────────────────
 const SEED = [
