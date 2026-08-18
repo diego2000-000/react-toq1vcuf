@@ -1,0 +1,523 @@
+<title>Chantier Jarvis</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500&display=swap">
+
+<style>
+  :root {
+    --ground:  #f2f4f6;
+    --surface: #ffffff;
+    --sunk:    #e9ecef;
+    --ink:     #171a1f;
+    --muted:   #697280;
+    --faint:   #98a1ad;
+    --line:    #dde1e6;
+    --accent:  #1c5d7a;
+
+    --done:    #2f7a4f;
+    --active:  #a8700f;
+    --blocked: #a83232;
+    --next:    #6b7480;
+
+    --done-bg:    #e8f2ea;
+    --active-bg:  #f7efdd;
+    --blocked-bg: #f7e7e7;
+    --next-bg:    #eceef1;
+
+    --radius: 10px;
+    --col-w: 268px;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground:  #14171b;
+      --surface: #1b1f24;
+      --sunk:    #191d22;
+      --ink:     #e6e9ed;
+      --muted:   #99a2ae;
+      --faint:   #6d7783;
+      --line:    #2b3138;
+      --accent:  #66aec8;
+
+      --done:    #62bd87;
+      --active:  #dfab54;
+      --blocked: #e37676;
+      --next:    #8b95a1;
+
+      --done-bg:    #1a2a20;
+      --active-bg:  #2a2418;
+      --blocked-bg: #2c1e1e;
+      --next-bg:    #22262c;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --ground:  #14171b;
+    --surface: #1b1f24;
+    --sunk:    #191d22;
+    --ink:     #e6e9ed;
+    --muted:   #99a2ae;
+    --faint:   #6d7783;
+    --line:    #2b3138;
+    --accent:  #66aec8;
+
+    --done:    #62bd87;
+    --active:  #dfab54;
+    --blocked: #e37676;
+    --next:    #8b95a1;
+
+    --done-bg:    #1a2a20;
+    --active-bg:  #2a2418;
+    --blocked-bg: #2c1e1e;
+    --next-bg:    #22262c;
+  }
+
+  * { box-sizing: border-box; }
+
+  code {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 0.9em;
+    background: var(--sunk);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 0.5px 4px;
+    color: var(--ink);
+    word-break: break-word;
+  }
+
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+    font-size: 15px;
+    line-height: 1.55;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  .wrap {
+    max-width: 1240px;
+    margin: 0 auto;
+    padding: 40px 24px 64px;
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+  }
+
+  /* ── En-tête ─────────────────────────────────────────────────── */
+
+  .eyebrow {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 11px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--faint);
+  }
+
+  h1 {
+    font-family: Archivo, ui-sans-serif, system-ui, sans-serif;
+    font-weight: 700;
+    font-size: clamp(30px, 5vw, 42px);
+    letter-spacing: -0.015em;
+    line-height: 1.05;
+    text-wrap: balance;
+    margin: 6px 0 10px;
+  }
+
+  .thesis {
+    max-width: 62ch;
+    color: var(--muted);
+    margin: 0;
+  }
+
+  /* ── Relevé ──────────────────────────────────────────────────── */
+
+  .readout {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .tiles {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+    gap: 10px;
+  }
+
+  .tile {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 13px 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+  .tile .n {
+    font-family: Archivo, sans-serif;
+    font-weight: 700;
+    font-size: 27px;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+  .tile .k {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 10.5px;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .tile.t-done   .n { color: var(--done); }
+  .tile.t-active .n { color: var(--active); }
+  .tile.t-block  .n { color: var(--blocked); }
+  .tile.t-next   .n { color: var(--next); }
+
+  .bar {
+    height: 4px;
+    background: var(--sunk);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .bar span {
+    display: block;
+    height: 100%;
+    width: 44.4%;
+    background: var(--done);
+  }
+
+  .facts {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 11.5px;
+    color: var(--muted);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 14px;
+  }
+  .facts b { color: var(--ink); font-weight: 500; }
+
+  /* ── Tableau ─────────────────────────────────────────────────── */
+
+  .board {
+    display: flex;
+    gap: 14px;
+    overflow-x: auto;
+    padding-bottom: 10px;
+    scroll-snap-type: x proximity;
+  }
+
+  .col {
+    flex: 1 0 var(--col-w);
+    min-width: var(--col-w);
+    scroll-snap-align: start;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .col-head {
+    border-top: 2px solid var(--rule);
+    padding-top: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 10px;
+  }
+  .col-head h2 {
+    font-family: Archivo, sans-serif;
+    font-weight: 600;
+    font-size: 12px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--rule);
+    margin: 0;
+  }
+  .col-head .n {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 12px;
+    color: var(--faint);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .c-done   { --rule: var(--done); }
+  .c-active { --rule: var(--active); }
+  .c-block  { --rule: var(--blocked); }
+  .c-next   { --rule: var(--next); }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 14px 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .c-block .card { border-left: 3px solid var(--blocked); }
+
+  .card h3 {
+    font-family: Archivo, sans-serif;
+    font-weight: 600;
+    font-size: 14.5px;
+    line-height: 1.3;
+    letter-spacing: -0.005em;
+    margin: 0;
+    text-wrap: balance;
+  }
+  .card p {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--muted);
+  }
+  .card .meta {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 10.5px;
+    color: var(--faint);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 8px;
+  }
+
+  .waits {
+    background: var(--blocked-bg);
+    border-radius: 7px;
+    padding: 9px 11px;
+    font-size: 12.5px !important;
+    color: var(--ink) !important;
+    line-height: 1.45;
+  }
+  .waits em {
+    display: block;
+    font-family: "IBM Plex Mono", monospace;
+    font-style: normal;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--blocked);
+    margin-bottom: 3px;
+  }
+
+  .empty {
+    border: 1px dashed var(--line);
+    border-radius: var(--radius);
+    padding: 20px 16px;
+    font-size: 12.5px;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+
+  /* ── Pied ────────────────────────────────────────────────────── */
+
+  footer {
+    border-top: 1px solid var(--line);
+    padding-top: 18px;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 11.5px;
+    color: var(--faint);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 18px;
+  }
+
+  @media (max-width: 640px) {
+    .wrap { padding: 28px 16px 48px; gap: 26px; }
+    :root { --col-w: 244px; }
+  }
+</style>
+
+<div class="wrap">
+
+  <header>
+    <div class="eyebrow">Refexio · système interne</div>
+    <h1>Chantier Jarvis</h1>
+    <p class="thesis">
+      Construire un assistant qui lit les données de la compagnie et donne l'heure juste sur ce
+      qui se passe. Ce tableau suit la construction du système — pas les dossiers qu'il gère.
+    </p>
+  </header>
+
+  <section class="readout" aria-label="Relevé">
+    <div class="tiles">
+      <div class="tile t-done"><span class="n">8</span><span class="k">Livré</span></div>
+      <div class="tile t-active"><span class="n">0</span><span class="k">En vol</span></div>
+      <div class="tile t-block"><span class="n">4</span><span class="k">Bloqué</span></div>
+      <div class="tile t-next"><span class="n">6</span><span class="k">À venir</span></div>
+    </div>
+    <div class="bar"><span></span></div>
+    <div class="facts">
+      <span><b>8</b> livrés sur 18</span>
+      <span><b>15</b> tests, tous verts</span>
+      <span><b>4</b> commits</span>
+      <span>branche <b>claude/jarvis-data-access-model-jsj6l5</b></span>
+    </div>
+  </section>
+
+  <div class="board">
+
+    <!-- ─── LIVRÉ ─────────────────────────────────────────────── -->
+    <section class="col c-done">
+      <div class="col-head"><h2>Livré</h2><span class="n">8</span></div>
+
+      <article class="card">
+        <h3>Persistance réelle des dossiers</h3>
+        <p>L'app appelait <code>window.storage</code>, une API qui n'existe dans aucun navigateur.
+           Rien ne se sauvegardait, et l'échec était avalé en silence. Remplacé par trois niveaux
+           horodatés : la page publiée, localStorage, l'aperçu StackBlitz.</p>
+        <div class="meta"><span>src/storage.js</span><span>5221354</span></div>
+      </article>
+
+      <article class="card">
+        <h3>Sauvegarde groupée + pastille d'état</h3>
+        <p>Chaque frappe part dans localStorage sur-le-champ. La publication partagée attend six
+           secondes de silence et ne coupe jamais une saisie en cours ; la position de lecture est
+           restaurée après le rechargement.</p>
+        <div class="meta"><span>src/App.js</span><span>5221354</span></div>
+      </article>
+
+      <article class="card">
+        <h3>Lien privé, ouvrable sur téléphone</h3>
+        <p>L'app existe comme page privée sur ton compte, à mettre en raccourci sur l'écran
+           d'accueil. Les données suivent d'un appareil à l'autre.</p>
+        <div class="meta"><span>artifact/index.html</span></div>
+      </article>
+
+      <article class="card">
+        <h3>Build autonome en un fichier</h3>
+        <p>236 Ko, React inclus, aucune dépendance réseau hormis la police.
+           <code>npm run build:artifact</code> régénère la page publiée.</p>
+        <div class="meta"><span>build-artifact.mjs</span><span>5221354</span></div>
+      </article>
+
+      <article class="card">
+        <h3>Modèle métier séparé de l'affichage</h3>
+        <p>Le déroulement des phases, le gabarit d'un dossier et les calculs d'état sortent de
+           React. C'est ce qui rend le reste testable hors navigateur.</p>
+        <div class="meta"><span>src/dossier.js</span><span>47af2a8</span></div>
+      </article>
+
+      <article class="card">
+        <h3>Moteur de fusion idempotent</h3>
+        <p>Une règle : la source externe décide qu'un dossier existe, jamais où il en est.
+           Tâches, notes, visites et chantier ne sont jamais écrasés ; un dossier disparu du flux
+           survit ; un dossier saisi à la main est adopté, pas dupliqué.</p>
+        <div class="meta"><span>src/merge.js</span><span>8 tests</span><span>47af2a8</span></div>
+      </article>
+
+      <article class="card">
+        <h3>Script d'import Encircle</h3>
+        <p>Lit l'état courant depuis un fichier ou depuis la page publiée, lit les réclamations
+           depuis un export JSON ou depuis l'API, fusionne, réécrit la page. Testé de bout en bout
+           avec un export simulé.</p>
+        <div class="meta"><span>scripts/sync-encircle.mjs</span><span>47af2a8</span></div>
+      </article>
+
+      <article class="card">
+        <h3>Vue kanban des dossiers</h3>
+        <p>Dans l'app : un dossier occupe la colonne de sa première phase inachevée, donc le
+           tableau montre où il est bloqué, pas la phase la plus avancée qu'il ait touchée.</p>
+        <div class="meta"><span>src/App.js</span><span>7 tests</span><span>1751612</span></div>
+      </article>
+    </section>
+
+    <!-- ─── EN VOL ────────────────────────────────────────────── -->
+    <section class="col c-active">
+      <div class="col-head"><h2>En vol</h2><span class="n">0</span></div>
+      <div class="empty">
+        Rien en cours de construction. Tout ce qui suit dépend des quatre déblocages de la
+        colonne suivante — la balle est dans ton camp.
+      </div>
+    </section>
+
+    <!-- ─── BLOQUÉ ────────────────────────────────────────────── -->
+    <section class="col c-block">
+      <div class="col-head"><h2>Bloqué</h2><span class="n">4</span></div>
+
+      <article class="card">
+        <h3>Lire la spécification d'Encircle</h3>
+        <p>Le proxy réseau refuse <code>api.encircleapp.com</code> et
+           <code>help.encircleapp.com</code> — vérifié, tunnel CONNECT rejeté en 403. Aucun nom
+           d'endpoint n'a donc été inventé.</p>
+        <p class="waits"><em>attend</em>Ouvrir ces domaines dans la politique réseau de
+           l'environnement Claude Code.</p>
+      </article>
+
+      <article class="card">
+        <h3>Appeler l'API pour vrai</h3>
+        <p>L'API publique d'Encircle est gratuite. Le jeton se crée dans Encircle :
+           Settings → Bots/Public API → Create Bot → Create Bearer Token. Droits admin requis.</p>
+        <p class="waits"><em>attend</em>Un bearer token, déposé en variable d'environnement.
+           Jamais collé dans une conversation : il ouvre toutes les données de la compagnie.</p>
+      </article>
+
+      <article class="card">
+        <h3>Verrouiller le mapping des champs</h3>
+        <p>Le script essaie les noms de champs courants et s'arrête net en affichant les clés
+           réellement reçues, plutôt que de deviner en silence.</p>
+        <p class="waits"><em>attend</em>Une vraie réponse d'API — une seule réclamation suffit,
+           champs sensibles caviardés.</p>
+      </article>
+
+      <article class="card">
+        <h3>Numérotation des dossiers</h3>
+        <p>Le format <code>2603MO027</code> : c'est ton numéro interne, ou celui d'Encircle ?
+           La réponse décide comment les deux systèmes se rattachent l'un à l'autre.</p>
+        <p class="waits"><em>attend</em>Ta réponse.</p>
+      </article>
+    </section>
+
+    <!-- ─── À VENIR ───────────────────────────────────────────── -->
+    <section class="col c-next">
+      <div class="col-head"><h2>À venir</h2><span class="n">6</span></div>
+
+      <article class="card">
+        <h3>Import matinal automatique</h3>
+        <p>Une session planifiée : Encircle → fusion → republication, tous les matins. Pas de
+           serveur à maintenir. Le code de fusion et d'import est déjà écrit et testé ; il ne
+           manque que l'accès.</p>
+        <div class="meta"><span>dépend des 4 blocages</span></div>
+      </article>
+
+      <article class="card">
+        <h3>Questions en langage naturel</h3>
+        <p>« Qu'est-ce qui est en retard cette semaine ? », « où en est le dossier du Fleuve ? ».
+           C'est le cœur du Jarvis — et ça devient possible seulement une fois qu'il existe une
+           source de vérité unique et à jour.</p>
+      </article>
+
+      <article class="card">
+        <h3>Alertes d'échéances</h3>
+        <p>Les délais sont déjà calculés dans l'app (rapport sous 24 h, estimation sous 3 jours,
+           estimé de reconstruction sous 7 jours). Reste à les pousser vers toi au lieu
+           d'attendre que tu ouvres la page.</p>
+      </article>
+
+      <article class="card">
+        <h3>Brancher Outlook, Teams, SharePoint</h3>
+        <p>Le connecteur Microsoft 365 est déjà actif sur ton compte. Les courriels d'assureurs et
+           les fils Teams sont la moitié de « ce qui se passe dans tes affaires ».</p>
+      </article>
+
+      <article class="card">
+        <h3>Vraie authentification</h3>
+        <p>Le PIN est en clair dans le code de la page : c'est un loquet, pas une serrure. Ce qui
+           protège réellement aujourd'hui, c'est que l'URL est privée à ton compte. À revoir avant
+           d'ouvrir l'accès à une équipe.</p>
+      </article>
+
+      <article class="card">
+        <h3>Doublon à trancher</h3>
+        <p><code>dki-refexio-final.jsx</code> à la racine a divergé de <code>src/App.js</code>.
+           Le supprimer, ou le remettre en phase ? Deux copies qui dérivent finissent toujours par
+           coûter une soirée.</p>
+      </article>
+    </section>
+
+  </div>
+
+  <footer>
+    <span>État au 18 août 2026</span>
+    <span>diego2000-000/react-toq1vcuf</span>
+    <span>15/15 tests verts</span>
+  </footer>
+
+</div>
