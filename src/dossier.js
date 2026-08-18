@@ -76,3 +76,36 @@ export const getOverallStatus = (tasks) => {
   if (vals.some(v => v === "inprogress" || v === "done")) return "inprogress";
   return "pending";
 };
+
+// ─── POSITION DANS LE DÉROULEMENT ─────────────────────────────────────────────
+//
+// La phase courante d'un dossier est la première dont toutes les tâches ne sont
+// pas complétées. Un dossier entièrement terminé reste dans la dernière colonne
+// — c'est là qu'on veut le voir, marqué « Complété ».
+
+export function currentPhase(dossier) {
+  const tasks = (dossier && dossier.tasks) || {};
+  for (const phase of PHASES) {
+    if (phase.tasks.some(t => tasks[t.id] !== "done")) return phase;
+  }
+  return PHASES[PHASES.length - 1];
+}
+
+export function phaseProgress(dossier, phase) {
+  const tasks = (dossier && dossier.tasks) || {};
+  const done = phase.tasks.filter(t => tasks[t.id] === "done").length;
+  return { done, total: phase.tasks.length, pct: Math.round((done / phase.tasks.length) * 100) };
+}
+
+// Regroupe les dossiers par colonne, en conservant l'ordre reçu.
+export function groupByPhase(dossiers) {
+  const cols = new Map(PHASES.map(p => [p.id, []]));
+  for (const d of dossiers) cols.get(currentPhase(d).id).push(d);
+  return PHASES.map(phase => ({ phase, dossiers: cols.get(phase.id) }));
+}
+
+export function daysSince(iso) {
+  if (!iso) return null;
+  const ms = Date.now() - new Date(iso).getTime();
+  return Number.isFinite(ms) ? Math.max(0, Math.floor(ms / 86400000)) : null;
+}

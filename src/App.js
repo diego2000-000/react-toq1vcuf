@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { PHASES, ALL_TASKS, newDossierTemplate, getProgress, getOverallStatus } from "./dossier";
+import { PHASES, ALL_TASKS, newDossierTemplate, getProgress, getOverallStatus,
+         groupByPhase, phaseProgress, daysSince } from "./dossier";
 import { loadDossiers, saveLocal, makePayload, publishSnapshot, stashView, popView } from "./storage";
 
 const FontImport = () => (
@@ -769,7 +770,99 @@ function DossierDetail({ dossier, onBack, onUpdate }) {
 }
 
 // ─── HOME VIEW ────────────────────────────────────────────────────────────────
-function HomeView({ dossiers, onOpen, onNew }) {
+// ─── VUE KANBAN ───────────────────────────────────────────────────────────────
+//
+// Une colonne par phase du déroulement. Un dossier occupe la colonne de sa
+// première phase inachevée : le tableau montre donc où chaque dossier est
+// réellement bloqué, pas la phase la plus avancée qu'il ait touchée.
+
+const VUE_KEY = "dki-vue";
+
+function KanbanCard({ dossier, phase, onClick }) {
+  const { done, total, pct } = phaseProgress(dossier, phase);
+  const statut = getOverallStatus(dossier.tasks);
+  const s = STATUS[statut];
+  const jours = daysSince(dossier.createdAt);
+
+  return (
+    <div className="fade-in" onClick={onClick}
+      style={{ background: "#111", border: `1px solid ${statut === "overdue" ? "#6e1a1a" : "#1e1e1e"}`,
+        borderRadius: 8, padding: "11px 12px", cursor: "pointer", display: "flex",
+        flexDirection: "column", gap: 8, transition: "border-color 0.15s, background 0.15s" }}
+      onMouseEnter={e => { e.currentTarget.style.borderColor = phase.accent; e.currentTarget.style.background = "#141414"; }}
+      onMouseLeave={e => { e.currentTarget.style.borderColor = statut === "overdue" ? "#6e1a1a" : "#1e1e1e"; e.currentTarget.style.background = "#111"; }}>
+
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+        <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 13, fontWeight: 700,
+          color: "#e0d8c8", letterSpacing: "0.03em" }}>{dossier.id}</span>
+        <span title={s.label} style={{ width: 6, height: 6, borderRadius: "50%", background: s.dot, flexShrink: 0,
+          animation: statut === "inprogress" ? "pulse 2s ease-in-out infinite" : "none" }} />
+      </div>
+
+      <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: "#666",
+        whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{dossier.client}</div>
+
+      <ProgressBar pct={pct} color={phase.accent} height={2} />
+
+      <div style={{ display: "flex", justifyContent: "space-between", gap: 6,
+        fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: "#444", fontVariantNumeric: "tabular-nums" }}>
+        <span>{done}/{total} dans la phase</span>
+        {jours !== null && <span>{jours}j</span>}
+      </div>
+    </div>
+  );
+}
+
+function KanbanView({ dossiers, onOpen }) {
+  const colonnes = groupByPhase(dossiers);
+
+  return (
+    <div className="fade-in" style={{ display: "flex", gap: 10, overflowX: "auto",
+      paddingBottom: 10, marginBottom: 16, scrollSnapType: "x proximity" }}>
+      {colonnes.map(({ phase, dossiers: liste }) => (
+        <div key={phase.id} style={{ flex: "1 0 208px", scrollSnapAlign: "start",
+          display: "flex", flexDirection: "column", gap: 10 }}>
+
+          <div style={{ borderTop: `2px solid ${phase.color}`, paddingTop: 9 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
+              <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 9.5, fontWeight: 600,
+                letterSpacing: "0.08em", color: phase.accent, lineHeight: 1.35 }}>
+                {phase.icon} {phase.label}
+              </span>
+              <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: "#3a3a3a",
+                fontVariantNumeric: "tabular-nums", flexShrink: 0 }}>{liste.length}</span>
+            </div>
+          </div>
+
+          {liste.length === 0
+            ? <div style={{ border: "1px dashed #1c1c1c", borderRadius: 8, padding: "18px 0",
+                textAlign: "center", fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: "#2a2a2a" }}>—</div>
+            : liste.map(d => <KanbanCard key={d.id} dossier={d} phase={phase} onClick={() => onOpen(d.id)} />)}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function VueToggle({ vue, onChange }) {
+  return (
+    <div style={{ display: "inline-flex", background: "#111", border: "1px solid #1e1e1e",
+      borderRadius: 8, padding: 3, gap: 3, marginBottom: 16 }}>
+      {[["liste", "LISTE"], ["kanban", "KANBAN"]].map(([id, label]) => (
+        <button key={id} onClick={() => onChange(id)}
+          style={{ padding: "6px 14px", borderRadius: 6, border: "none", cursor: "pointer",
+            background: vue === id ? "#1c1c1c" : "transparent",
+            color: vue === id ? "#e0d8c8" : "#555",
+            fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, fontWeight: 600,
+            letterSpacing: "0.1em", transition: "all 0.15s" }}>
+          {label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function HomeView({ dossiers, onOpen, onNew, vue, onVueChange }) {
   const total = dossiers.length;
   const completed = dossiers.filter(d => getOverallStatus(d.tasks) === "done").length;
   const overdue = dossiers.filter(d => getOverallStatus(d.tasks) === "overdue").length;
@@ -793,12 +886,15 @@ function HomeView({ dossiers, onOpen, onNew }) {
           </div>
         ))}
       </div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 16 }}>
-        {dossiers.length === 0
-          ? <div style={{ textAlign: "center", padding: "40px 0", fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, color: "#333" }}>Aucun dossier.</div>
-          : dossiers.map(d => <DossierCard key={d.id} dossier={d} onClick={() => onOpen(d.id)} />)
-        }
-      </div>
+      <VueToggle vue={vue} onChange={onVueChange} />
+
+      {dossiers.length === 0
+        ? <div style={{ textAlign: "center", padding: "40px 0", fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, color: "#333", marginBottom: 16 }}>Aucun dossier.</div>
+        : vue === "kanban"
+          ? <KanbanView dossiers={dossiers} onOpen={onOpen} />
+          : <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 16 }}>
+              {dossiers.map(d => <DossierCard key={d.id} dossier={d} onClick={() => onOpen(d.id)} />)}
+            </div>}
       <button onClick={onNew}
         style={{ width: "100%", padding: "13px", background: "transparent",
           border: "1px dashed #252525", borderRadius: 10, color: "#3a3a3a",
@@ -909,6 +1005,14 @@ export default function App() {
   const [dossiers, setDossiers] = useState(null);
   const [activeDossierId, setActiveDossierId] = useState(null);
   const [syncState, setSyncState] = useState("synced");
+  const [vue, setVue] = useState(() => {
+    try { return localStorage.getItem(VUE_KEY) === "kanban" ? "kanban" : "liste"; } catch (_) { return "liste"; }
+  });
+
+  const changerVue = useCallback((v) => {
+    setVue(v);
+    try { localStorage.setItem(VUE_KEY, v); } catch (_) {}
+  }, []);
 
   const dossiersRef = useRef(null);
   const timerRef = useRef(null);
@@ -984,10 +1088,10 @@ export default function App() {
   return (
     <div style={{ minHeight: "100vh", background: "#0c0c0c", padding: "32px 20px" }}>
       <FontImport />
-      <div style={{ maxWidth: 680, margin: "0 auto" }}>
+      <div style={{ maxWidth: !activeDossier && vue === "kanban" ? 1180 : 680, margin: "0 auto", transition: "max-width 0.2s" }}>
         {activeDossier
           ? <DossierDetail dossier={activeDossier} onBack={() => setActiveDossierId(null)} onUpdate={handleUpdate} />
-          : <HomeView dossiers={dossiers} onOpen={setActiveDossierId} onNew={handleNew} />}
+          : <HomeView dossiers={dossiers} onOpen={setActiveDossierId} onNew={handleNew} vue={vue} onVueChange={changerVue} />}
       </div>
       <SyncChip state={syncState} onSave={publishNow} />
     </div>
