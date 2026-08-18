@@ -181,7 +181,7 @@
   .bar span {
     display: block;
     height: 100%;
-    width: 44.4%;
+    width: 50%;
     background: var(--done);
   }
 
@@ -338,16 +338,16 @@
 
   <section class="readout" aria-label="Relevé">
     <div class="tiles">
-      <div class="tile t-done"><span class="n">8</span><span class="k">Livré</span></div>
+      <div class="tile t-done"><span class="n">9</span><span class="k">Livré</span></div>
       <div class="tile t-active"><span class="n">0</span><span class="k">En vol</span></div>
-      <div class="tile t-block"><span class="n">4</span><span class="k">Bloqué</span></div>
+      <div class="tile t-block"><span class="n">3</span><span class="k">Bloqué</span></div>
       <div class="tile t-next"><span class="n">6</span><span class="k">À venir</span></div>
     </div>
     <div class="bar"><span></span></div>
     <div class="facts">
-      <span><b>8</b> livrés sur 18</span>
-      <span><b>15</b> tests, tous verts</span>
-      <span><b>4</b> commits</span>
+      <span><b>9</b> livrés sur 18</span>
+      <span><b>24</b> tests, tous verts</span>
+      <span><b>6</b> commits</span>
       <span>branche <b>claude/jarvis-data-access-model-jsj6l5</b></span>
     </div>
   </section>
@@ -356,7 +356,7 @@
 
     <!-- ─── LIVRÉ ─────────────────────────────────────────────── -->
     <section class="col c-done">
-      <div class="col-head"><h2>Livré</h2><span class="n">8</span></div>
+      <div class="col-head"><h2>Livré</h2><span class="n">9</span></div>
 
       <article class="card">
         <h3>Persistance réelle des dossiers</h3>
@@ -412,6 +412,16 @@
       </article>
 
       <article class="card">
+        <h3>Numérotation maison</h3>
+        <p>Le numéro est celui de Refexio : AAMM d'ouverture, puis un rang qui court sur
+           l'année. Le gabarit le tirait au sort entre 100 et 999 — il finissait donc par
+           doubler un numéro existant. Il suit maintenant le plus haut rang déjà pris.
+           Un dossier importé garde un numéro maison ; l'identifiant d'Encircle reste à
+           part, pour le rattachement.</p>
+        <div class="meta"><span>src/dossier.js</span><span>9 tests</span><span>60dee24</span></div>
+      </article>
+
+      <article class="card">
         <h3>Vue kanban des dossiers</h3>
         <p>Dans l'app : un dossier occupe la colonne de sa première phase inachevée, donc le
            tableau montre où il est bloqué, pas la phase la plus avancée qu'il ait touchée.</p>
@@ -430,7 +440,7 @@
 
     <!-- ─── BLOQUÉ ────────────────────────────────────────────── -->
     <section class="col c-block">
-      <div class="col-head"><h2>Bloqué</h2><span class="n">4</span></div>
+      <div class="col-head"><h2>Bloqué</h2><span class="n">3</span></div>
 
       <article class="card">
         <h3>Lire la spécification d'Encircle</h3>
@@ -442,11 +452,12 @@
       </article>
 
       <article class="card">
-        <h3>Appeler l'API pour vrai</h3>
-        <p>L'API publique d'Encircle est gratuite. Le jeton se crée dans Encircle :
-           Settings → Bots/Public API → Create Bot → Create Bearer Token. Droits admin requis.</p>
-        <p class="waits"><em>attend</em>Un bearer token, déposé en variable d'environnement.
-           Jamais collé dans une conversation : il ouvre toutes les données de la compagnie.</p>
+        <h3>Amener le jeton jusqu'ici</h3>
+        <p>Une clé existe déjà dans ton <code>.env</code>, mais ce fichier vit sur ta machine :
+           il n'est ni dans le dépôt, ni dans cet environnement. Rien ici ne peut le lire.</p>
+        <p class="waits"><em>attend</em>Déposer <code>ENCIRCLE_TOKEN</code> dans les variables
+           d'environnement Claude Code. Pas dans le dépôt, pas dans une conversation : un jeton
+           poussé sur GitHub est un jeton à révoquer.</p>
       </article>
 
       <article class="card">
@@ -457,12 +468,6 @@
            champs sensibles caviardés.</p>
       </article>
 
-      <article class="card">
-        <h3>Numérotation des dossiers</h3>
-        <p>Le format <code>2603MO027</code> : c'est ton numéro interne, ou celui d'Encircle ?
-           La réponse décide comment les deux systèmes se rattachent l'un à l'autre.</p>
-        <p class="waits"><em>attend</em>Ta réponse.</p>
-      </article>
     </section>
 
     <!-- ─── À VENIR ───────────────────────────────────────────── -->
@@ -515,9 +520,9 @@
   </div>
 
   <footer>
-    <span>État au 18 août 2026</span>
+    <span>État au 18 août 2026 · 15 h</span>
     <span>diego2000-000/react-toq1vcuf</span>
-    <span>15/15 tests verts</span>
+    <span>24/24 tests verts</span>
   </footer>
 
 </div>
