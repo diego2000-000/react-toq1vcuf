@@ -443,21 +443,30 @@
       <div class="col-head"><h2>Bloqué</h2><span class="n">3</span></div>
 
       <article class="card">
-        <h3>Lire la spécification d'Encircle</h3>
-        <p>Le proxy réseau refuse <code>api.encircleapp.com</code> et
-           <code>help.encircleapp.com</code> — vérifié, tunnel CONNECT rejeté en 403. Aucun nom
-           d'endpoint n'a donc été inventé.</p>
-        <p class="waits"><em>attend</em>Ouvrir ces domaines dans la politique réseau de
-           l'environnement Claude Code.</p>
+        <h3>Ouvrir le réseau vers Encircle</h3>
+        <p>Le proxy refuse <code>api.encircleapp.com</code> et <code>help.encircleapp.com</code> —
+           vérifié, tunnel CONNECT rejeté en 403. Aucun nom d'endpoint n'a donc été inventé.</p>
+        <p class="waits"><em>où</em>claude.ai/code → l'icône nuage « Jarvis » au-dessus de la
+           zone de message → engrenage → <b>Network access</b> : <b>Custom</b>. Dans
+           <b>Allowed domains</b>, une ligne par domaine :
+           <code>api.encircleapp.com</code>, <code>help.encircleapp.com</code>,
+           <code>*.frame.claudeusercontent.com</code>. Cocher <b>Also include default list of
+           common package managers</b>, sinon npm et GitHub tombent.</p>
       </article>
 
       <article class="card">
         <h3>Amener le jeton jusqu'ici</h3>
         <p>Une clé existe déjà dans ton <code>.env</code>, mais ce fichier vit sur ta machine :
            il n'est ni dans le dépôt, ni dans cet environnement. Rien ici ne peut le lire.</p>
-        <p class="waits"><em>attend</em>Déposer <code>ENCIRCLE_TOKEN</code> dans les variables
-           d'environnement Claude Code. Pas dans le dépôt, pas dans une conversation : un jeton
-           poussé sur GitHub est un jeton à révoquer.</p>
+        <p class="waits"><em>où</em>Même dialogue, champ <b>Environment variables</b>, format
+           <code>.env</code> : <code>ENCIRCLE_TOKEN=…</code>. Une seule ligne. Les valeurs sont
+           reprises au démarrage d'une session : celle-ci ne les verra pas, il faut en ouvrir une
+           nouvelle.</p>
+        <p class="waits"><em>à savoir</em>Ce champ n'est pas un coffre-fort. Claude Code n'a pas
+           encore de magasin de secrets et le dialogue le dit lui-même : quiconque utilise
+           l'environnement peut lire la valeur. « Jarvis » est personnel à ton compte, donc
+           acceptable — mais garde le jeton révocable et ne le mets pas dans un environnement
+           partagé.</p>
       </article>
 
       <article class="card">
