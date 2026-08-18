@@ -14,6 +14,7 @@
 // vu de la vraie documentation, sans toucher au code.
 
 import { readFileSync, writeFileSync } from "node:fs";
+import { pathToFileURL } from "node:url";
 import { mergeClaims } from "../src/merge.js";
 
 const DATA_EL = "dki-data";
@@ -112,7 +113,7 @@ const listFrom = (parsed) =>
   : Array.isArray(parsed.results) ? parsed.results
   : (() => { throw new Error("liste de réclamations introuvable (clés : " + Object.keys(parsed).join(", ") + ")"); })();
 
-async function fetchClaims() {
+export async function fetchClaims() {
   const token = process.env.ENCIRCLE_TOKEN;
   const url = process.env.ENCIRCLE_CLAIMS_URL;
   if (!token) throw new Error("ENCIRCLE_TOKEN manquant (Encircle : Réglages → Bots/Public API → Create Bot → Create Bearer Token).");
@@ -164,4 +165,7 @@ async function main() {
   }
 }
 
-main().catch((e) => { console.error("\n✗ " + e.message + "\n"); process.exit(1); });
+// Lancé directement : on exécute. Importé par un test : on se tait.
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  main().catch((e) => { console.error("\n✗ " + e.message + "\n"); process.exit(1); });
+}
