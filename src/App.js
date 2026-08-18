@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { loadDossiers, saveLocal, makePayload, publishSnapshot, stashView, popView } from "./storage";
 
 const FontImport = () => (
   <style>{`
@@ -129,7 +130,6 @@ const getOverallStatus = (tasks) => {
 };
 
 // ─── STORAGE ──────────────────────────────────────────────────────────────────
-const STORAGE_KEY = "dki-refexio-final";
 const SEED = [
   {
     id: "2603MO027", client: "SDC Le Callière", createdAt: "2026-03-26T10:00:00.000Z",
@@ -160,15 +160,50 @@ const SEED = [
   },
 ];
 
-async function loadDossiers() {
-  try {
-    const res = await window.storage.get(STORAGE_KEY);
-    if (res?.value) return JSON.parse(res.value);
-  } catch (_) {}
-  return SEED;
-}
-async function saveDossiers(d) {
-  try { await window.storage.set(STORAGE_KEY, JSON.stringify(d)); } catch (_) {}
+// ─── SYNCHRONISATION ──────────────────────────────────────────────────────────
+// Chaque modification part dans localStorage sur-le-champ. La publication dans
+// la page — la seule couche partagée entre appareils — est groupée : elle
+// recharge toutes les vues ouvertes, on ne la déclenche donc pas à chaque
+// frappe, ni pendant qu'un champ est en train d'être rempli.
+
+const SYNC_DELAY_MS   = 6000;  // silence requis avant de publier
+const SYNC_BUSY_MS    = 3000;  // on repasse plus tard si un champ est actif
+const SYNC_BACKOFF_MS = 30000; // publication trop fréquente : on ralentit
+
+const SYNC_LABEL = {
+  synced:   { text: "Synchronisé",        color: "#3ad876", dot: "#175e30" },
+  pending:  { text: "Modifications",      color: "#8fcc44", dot: "#3d6a1a" },
+  saving:   { text: "Publication…",       color: "#3AB8E0", dot: "#1A6E8E" },
+  local:    { text: "Cet appareil seul",  color: "#666",    dot: "#2a2a2a" },
+  readonly: { text: "Lecture seule",      color: "#666",    dot: "#2a2a2a" },
+  error:    { text: "Échec — réessayer",  color: "#cc4444", dot: "#6e1a1a" },
+};
+
+const isFieldActive = () => {
+  const el = document.activeElement;
+  return !!el && ["INPUT", "TEXTAREA", "SELECT"].includes(el.tagName);
+};
+
+function SyncChip({ state, onSave }) {
+  const s = SYNC_LABEL[state] || SYNC_LABEL.local;
+  const actionable = state === "pending" || state === "error";
+  return (
+    <div style={{ position: "fixed", right: 14, bottom: 14, zIndex: 50 }}>
+      <button
+        onClick={actionable ? onSave : undefined}
+        disabled={!actionable}
+        title={actionable ? "Publier maintenant" : undefined}
+        style={{ display: "inline-flex", alignItems: "center", gap: 7,
+          background: "#111", border: `1px solid ${s.dot}`, borderRadius: 999,
+          padding: "6px 12px", fontFamily: "'IBM Plex Mono', monospace",
+          fontSize: 10, letterSpacing: "0.08em", color: s.color,
+          cursor: actionable ? "pointer" : "default", transition: "all 0.15s" }}>
+        <span style={{ width: 5, height: 5, borderRadius: "50%", background: s.color,
+          animation: state === "saving" ? "pulse 1.2s ease-in-out infinite" : "none" }} />
+        {s.text.toUpperCase()}
+      </button>
+    </div>
+  );
 }
 
 // ─── SHARED UI ────────────────────────────────────────────────────────────────
@@ -942,9 +977,58 @@ export default function App() {
   const [unlocked, setUnlocked] = useState(() => sessionStorage.getItem("dki-auth") === "1");
   const [dossiers, setDossiers] = useState(null);
   const [activeDossierId, setActiveDossierId] = useState(null);
+  const [syncState, setSyncState] = useState("synced");
 
-  useEffect(() => { if (unlocked) loadDossiers().then(setDossiers); }, [unlocked]);
-  useEffect(() => { if (dossiers !== null) saveDossiers(dossiers); }, [dossiers]);
+  const dossiersRef = useRef(null);
+  const timerRef = useRef(null);
+  const publishRef = useRef(null);
+  const restoredRef = useRef(false);
+
+  useEffect(() => { if (unlocked) loadDossiers(SEED).then(setDossiers); }, [unlocked]);
+
+  // Publier recharge la vue : on revient là où on était.
+  useEffect(() => {
+    if (!dossiers || restoredRef.current) return;
+    restoredRef.current = true;
+    const view = popView();
+    if (!view) return;
+    if (view.dossierId && dossiers.some(d => d.id === view.dossierId)) setActiveDossierId(view.dossierId);
+    if (view.scrollY) requestAnimationFrame(() => window.scrollTo(0, view.scrollY));
+  }, [dossiers]);
+
+  const publishNow = useCallback(async () => {
+    clearTimeout(timerRef.current);
+    const current = dossiersRef.current;
+    if (!current) return;
+    setSyncState("saving");
+    stashView({ dossierId: activeDossierId, scrollY: window.scrollY });
+    const res = await publishSnapshot(makePayload(current));
+    if (res.status === "published" || res.status === "conflict") setSyncState("synced");
+    else if (res.status === "unavailable") setSyncState("local");
+    else if (res.status === "readonly") setSyncState("readonly");
+    else if (res.status === "retry") { setSyncState("pending"); timerRef.current = setTimeout(() => publishRef.current(), SYNC_BACKOFF_MS); }
+    else setSyncState("error");
+  }, [activeDossierId]);
+  publishRef.current = publishNow;
+
+  // Écriture locale immédiate, publication différée.
+  useEffect(() => {
+    if (dossiers === null) return;
+    const first = dossiersRef.current === null;
+    dossiersRef.current = dossiers;
+    if (first) return;
+
+    saveLocal(makePayload(dossiers));
+    setSyncState(prev => (prev === "readonly" || prev === "local" ? prev : "pending"));
+
+    const tick = () => {
+      if (isFieldActive()) { timerRef.current = setTimeout(tick, SYNC_BUSY_MS); return; }
+      publishRef.current();
+    };
+    clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(tick, SYNC_DELAY_MS);
+    return () => clearTimeout(timerRef.current);
+  }, [dossiers]);
 
   const handleUpdate = useCallback((updated) =>
     setDossiers(prev => prev.map(d => d.id === updated.id ? updated : d)), []);
@@ -974,6 +1058,7 @@ export default function App() {
           ? <DossierDetail dossier={activeDossier} onBack={() => setActiveDossierId(null)} onUpdate={handleUpdate} />
           : <HomeView dossiers={dossiers} onOpen={setActiveDossierId} onNew={handleNew} />}
       </div>
+      <SyncChip state={syncState} onSave={publishNow} />
     </div>
   );
 }
