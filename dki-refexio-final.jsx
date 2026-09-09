@@ -162,13 +162,19 @@ const SEED = [
 
 async function loadDossiers() {
   try {
-    const res = await window.storage.get(STORAGE_KEY);
-    if (res?.value) return JSON.parse(res.value);
+    const raw = window.storage
+      ? (await window.storage.get(STORAGE_KEY))?.value
+      : window.localStorage.getItem(STORAGE_KEY);
+    if (raw) return JSON.parse(raw);
   } catch (_) {}
   return SEED;
 }
 async function saveDossiers(d) {
-  try { await window.storage.set(STORAGE_KEY, JSON.stringify(d)); } catch (_) {}
+  const json = JSON.stringify(d);
+  try {
+    if (window.storage) await window.storage.set(STORAGE_KEY, json);
+    else window.localStorage.setItem(STORAGE_KEY, json);
+  } catch (_) {}
 }
 
 // ─── SHARED UI ────────────────────────────────────────────────────────────────
